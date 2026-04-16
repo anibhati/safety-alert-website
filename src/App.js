@@ -1,5 +1,24 @@
 import React, { useState, useRef, useEffect } from "react";
 
+const THEMES = {
+  dark: {
+    bg: "linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%)",
+    cardBg: "rgba(255,255,255,0.05)",
+    cardBorder: "rgba(255,255,255,0.1)",
+    text: "white",
+    textSecondary: "rgba(255,255,255,0.7)",
+    textMuted: "rgba(255,255,255,0.5)"
+  },
+  light: {
+    bg: "linear-gradient(135deg, #e0f2f1 0%, #b2dfdb 50%, #80cbc4 100%)",
+    cardBg: "rgba(255,255,255,0.6)",
+    cardBorder: "rgba(0,0,0,0.08)",
+    text: "#0f2027",
+    textSecondary: "rgba(15,32,39,0.75)",
+    textMuted: "rgba(15,32,39,0.5)"
+  }
+};
+
 const ALERT_STYLES = {
   critical: {
     bg: "linear-gradient(135deg, #ff0844 0%, #ffb199 100%)",
@@ -14,7 +33,6 @@ const ALERT_STYLES = {
     glow: "0 0 60px rgba(246, 163, 101, 0.5)"
   },
   safe: {
-    bg: "linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%)",
     accent: "#14b8a6",
     emoji: "✓",
     glow: "0 0 60px rgba(20, 184, 166, 0.3)"
@@ -40,6 +58,19 @@ const CLASS_ICONS = {
 };
 
 const ALL_CLASSES = ["safe", "screaming_distress", "gunshot", "siren", "vehicle_horn", "angry_confrontation"];
+const DANGER_CLASSES = ["screaming_distress", "gunshot", "siren", "vehicle_horn", "angry_confrontation"];
+
+// Sound wave logo
+const Logo = ({ color = "currentColor" }) => (
+  <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+    <rect x="2" y="13" width="3" height="6" rx="1.5" fill={color} opacity="0.6"/>
+    <rect x="7" y="9" width="3" height="14" rx="1.5" fill={color} opacity="0.8"/>
+    <rect x="12" y="5" width="3" height="22" rx="1.5" fill={color}/>
+    <rect x="17" y="9" width="3" height="14" rx="1.5" fill={color} opacity="0.8"/>
+    <rect x="22" y="13" width="3" height="6" rx="1.5" fill={color} opacity="0.6"/>
+    <rect x="27" y="11" width="3" height="10" rx="1.5" fill={color} opacity="0.7"/>
+  </svg>
+);
 
 export default function App() {
   const [result, setResult] = useState(null);
@@ -49,6 +80,9 @@ export default function App() {
   const [history, setHistory] = useState([]);
   const [waveform, setWaveform] = useState(new Array(60).fill(0));
   const [classScores, setClassScores] = useState({});
+  const [theme, setTheme] = useState("dark");
+  const [enabledClasses, setEnabledClasses] = useState(new Set(DANGER_CLASSES));
+  const [showFilters, setShowFilters] = useState(false);
 
   const streamRef = useRef(null);
   const intervalRef = useRef(null);
@@ -57,6 +91,7 @@ export default function App() {
   const animationRef = useRef(null);
 
   const API_URL = "https://bhatiani007-safetyalertapp.hf.space";
+  const t = THEMES[theme];
 
   const drawWaveform = () => {
     if (!analyserRef.current) return;
@@ -82,9 +117,18 @@ export default function App() {
       });
       const data = await res.json();
       if (data && data.label) {
-        setResult(data);
+        // Respect user's filter choices
+        const shouldAlert = data.is_danger && enabledClasses.has(data.label);
+        const displayData = { ...data, is_danger: shouldAlert };
 
-        // Simulate class scores (API doesn't return all, so we estimate)
+        if (!shouldAlert && data.is_danger) {
+          displayData.label = "safe";
+          displayData.alert_level = "safe";
+          displayData.message = "Environment sounds safe (filtered).";
+        }
+
+        setResult(displayData);
+
         const scores = {};
         ALL_CLASSES.forEach(cls => {
           if (cls === data.label) scores[cls] = data.confidence;
@@ -92,15 +136,14 @@ export default function App() {
         });
         setClassScores(scores);
 
-        // Add to history
         setHistory(prev => [{
-          label: data.label,
+          label: displayData.label,
           confidence: data.confidence,
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-          is_danger: data.is_danger
+          is_danger: shouldAlert
         }, ...prev].slice(0, 8));
 
-        if (data.is_danger) {
+        if (shouldAlert) {
           setFlash(true);
           if (navigator.vibrate) navigator.vibrate([500, 200, 500]);
           setTimeout(() => setFlash(false), 1000);
@@ -117,7 +160,6 @@ export default function App() {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
 
-      // Set up audio analysis for waveform
       audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
       const source = audioContextRef.current.createMediaStreamSource(stream);
       analyserRef.current = audioContextRef.current.createAnalyser();
@@ -144,132 +186,207 @@ export default function App() {
       record();
       intervalRef.current = setInterval(record, 3500);
     } catch (err) {
-      setError("Microphone access denied. Please allow mic access in your browser settings.");
+      setError("Microphone access denied. Please allow mic access.");
     }
   };
 
   const stopListening = () => {
     clearInterval(intervalRef.current);
     if (animationRef.current) cancelAnimationFrame(animationRef.current);
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(t => t.stop());
-    }
-    if (audioContextRef.current) {
-      audioContextRef.current.close();
-    }
+    if (streamRef.current) streamRef.current.getTracks().forEach(tr => tr.stop());
+    if (audioContextRef.current) audioContextRef.current.close();
     setIsListening(false);
     setResult(null);
     setWaveform(new Array(60).fill(0));
   };
 
+  const toggleClass = (cls) => {
+    setEnabledClasses(prev => {
+      const next = new Set(prev);
+      if (next.has(cls)) next.delete(cls);
+      else next.add(cls);
+      return next;
+    });
+  };
+
   useEffect(() => {
-    return () => {
-      if (animationRef.current) cancelAnimationFrame(animationRef.current);
-    };
+    return () => { if (animationRef.current) cancelAnimationFrame(animationRef.current); };
   }, []);
 
   const alertLevel = result?.alert_level || "safe";
-  const styles = ALERT_STYLES[alertLevel] || ALERT_STYLES.safe;
+  const alertStyle = ALERT_STYLES[alertLevel] || ALERT_STYLES.safe;
+  const bgStyle = alertLevel !== "safe" ? ALERT_STYLES[alertLevel].bg : t.bg;
   const displayLabel = result?.label ? result.label.replace(/_/g, " ") : "";
+
+  const cardStyle = {
+    background: t.cardBg,
+    backdropFilter: "blur(20px)",
+    border: `1px solid ${t.cardBorder}`,
+    borderRadius: "24px",
+    color: t.text
+  };
 
   return (
     <div style={{
       minHeight: "100vh",
-      background: flash ? "#ff0844" : styles.bg,
-      color: "white",
+      background: flash ? "#ff0844" : bgStyle,
+      color: t.text,
       fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-      transition: "background 0.5s ease",
-      padding: "40px 20px",
+      transition: "background 0.6s ease, color 0.4s ease",
+      padding: "30px 20px",
       position: "relative",
       overflow: "hidden"
     }}>
       {/* Background orbs */}
       <div style={{
-        position: "absolute",
-        top: "10%",
-        left: "5%",
-        width: "300px",
-        height: "300px",
-        background: styles.accent,
-        borderRadius: "50%",
-        filter: "blur(100px)",
-        opacity: 0.15,
+        position: "absolute", top: "10%", left: "5%",
+        width: "300px", height: "300px",
+        background: alertStyle.accent,
+        borderRadius: "50%", filter: "blur(100px)",
+        opacity: theme === "dark" ? 0.15 : 0.25,
         animation: "float 8s ease-in-out infinite",
         pointerEvents: "none"
       }} />
       <div style={{
-        position: "absolute",
-        bottom: "10%",
-        right: "5%",
-        width: "250px",
-        height: "250px",
-        background: styles.accent,
-        borderRadius: "50%",
-        filter: "blur(100px)",
-        opacity: 0.1,
+        position: "absolute", bottom: "10%", right: "5%",
+        width: "250px", height: "250px",
+        background: alertStyle.accent,
+        borderRadius: "50%", filter: "blur(100px)",
+        opacity: theme === "dark" ? 0.1 : 0.2,
         animation: "float 10s ease-in-out infinite reverse",
         pointerEvents: "none"
       }} />
 
       <style>{`
-        @keyframes float {
-          0%, 100% { transform: translate(0, 0); }
-          50% { transform: translate(30px, -30px); }
-        }
-        @keyframes pulse {
-          0%, 100% { transform: scale(1); opacity: 1; }
-          50% { transform: scale(1.05); opacity: 0.9; }
-        }
-        @keyframes ripple {
-          0% { transform: scale(0.8); opacity: 1; }
-          100% { transform: scale(2.5); opacity: 0; }
-        }
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(20px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes slideIn {
-          from { opacity: 0; transform: translateX(-20px); }
-          to { opacity: 1; transform: translateX(0); }
-        }
-        @keyframes barGrow {
-          from { transform: scaleY(0); }
-          to { transform: scaleY(1); }
-        }
+        @keyframes float { 0%,100% { transform: translate(0,0); } 50% { transform: translate(30px,-30px); } }
+        @keyframes pulse { 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.05); opacity: 0.9; } }
+        @keyframes ripple { 0% { transform: scale(0.8); opacity: 1; } 100% { transform: scale(2.5); opacity: 0; } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideIn { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        * { box-sizing: border-box; }
       `}</style>
 
-      {/* Header */}
+      {/* Top nav */}
       <div style={{
-        textAlign: "center",
-        marginBottom: "40px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        maxWidth: "1200px",
+        margin: "0 auto 30px",
         position: "relative",
-        zIndex: 5,
-        animation: "fadeIn 0.8s ease"
+        zIndex: 10,
+        animation: "fadeIn 0.6s ease"
       }}>
-        <h1 style={{
-          fontSize: "3rem",
-          fontWeight: 800,
-          margin: 0,
-          letterSpacing: "-0.02em",
-          background: `linear-gradient(135deg, ${styles.accent} 0%, #ffffff 100%)`,
-          WebkitBackgroundClip: "text",
-          WebkitTextFillColor: "transparent",
-          backgroundClip: "text"
-        }}>
-          SafetyAlert
-        </h1>
-        <p style={{
-          opacity: 0.7,
-          margin: "8px 0 0 0",
-          fontSize: "1rem",
-          letterSpacing: "0.05em",
-          fontWeight: 300
-        }}>
-          Real-time sound detection for the deaf community
-        </p>
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <Logo color={alertStyle.accent} />
+          <div>
+            <div style={{
+              fontSize: "1.5rem",
+              fontWeight: 800,
+              letterSpacing: "-0.02em",
+              background: `linear-gradient(135deg, ${alertStyle.accent} 0%, ${t.text} 100%)`,
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              backgroundClip: "text"
+            }}>
+              SafetyAlert
+            </div>
+            <div style={{ fontSize: "0.7rem", opacity: 0.6, letterSpacing: "0.08em" }}>
+              SOUND DETECTION FOR THE DEAF
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            style={{
+              background: t.cardBg,
+              border: `1px solid ${t.cardBorder}`,
+              borderRadius: "12px",
+              color: t.text,
+              padding: "8px 14px",
+              fontSize: "0.85rem",
+              fontWeight: 500,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px"
+            }}
+          >
+            ⚙ Filters
+          </button>
+          <button
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            style={{
+              background: t.cardBg,
+              border: `1px solid ${t.cardBorder}`,
+              borderRadius: "12px",
+              color: t.text,
+              padding: "8px 14px",
+              fontSize: "0.95rem",
+              cursor: "pointer"
+            }}
+          >
+            {theme === "dark" ? "☀" : "🌙"}
+          </button>
+        </div>
       </div>
 
-      {/* Main content grid */}
+      {/* Filters panel */}
+      {showFilters && (
+        <div style={{
+          ...cardStyle,
+          maxWidth: "1200px",
+          margin: "0 auto 20px",
+          padding: "20px 24px",
+          position: "relative",
+          zIndex: 5,
+          animation: "fadeIn 0.3s ease"
+        }}>
+          <div style={{
+            fontSize: "0.8rem",
+            fontWeight: 600,
+            opacity: 0.7,
+            marginBottom: "14px",
+            letterSpacing: "0.1em",
+            textTransform: "uppercase"
+          }}>
+            Alert Categories
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
+            {DANGER_CLASSES.map(cls => {
+              const enabled = enabledClasses.has(cls);
+              return (
+                <button
+                  key={cls}
+                  onClick={() => toggleClass(cls)}
+                  style={{
+                    background: enabled ? CLASS_COLORS[cls] : "transparent",
+                    border: `1px solid ${enabled ? CLASS_COLORS[cls] : t.cardBorder}`,
+                    borderRadius: "100px",
+                    color: enabled ? "white" : t.textSecondary,
+                    padding: "8px 16px",
+                    fontSize: "0.85rem",
+                    fontWeight: 500,
+                    cursor: "pointer",
+                    textTransform: "capitalize",
+                    transition: "all 0.2s ease",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px"
+                  }}
+                >
+                  {CLASS_ICONS[cls]} {cls.replace(/_/g, " ")}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Main grid */}
       <div style={{
         display: "grid",
         gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
@@ -279,19 +396,16 @@ export default function App() {
         position: "relative",
         zIndex: 5
       }}>
-        {/* Left: Main detection card */}
+        {/* Main card */}
         <div style={{
-          background: "rgba(255,255,255,0.05)",
-          backdropFilter: "blur(20px)",
-          border: "1px solid rgba(255,255,255,0.1)",
-          borderRadius: "24px",
+          ...cardStyle,
           padding: "40px 30px",
           minHeight: "400px",
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          boxShadow: styles.glow,
+          boxShadow: alertStyle.glow,
           transition: "all 0.5s ease",
           animation: "fadeIn 0.8s ease",
           textAlign: "center"
@@ -303,7 +417,7 @@ export default function App() {
                 marginBottom: "16px",
                 animation: result.is_danger ? "pulse 1s ease infinite" : "none"
               }}>
-                {styles.emoji}
+                {alertStyle.emoji}
               </div>
               <div style={{
                 fontSize: "1.6rem",
@@ -323,7 +437,7 @@ export default function App() {
               </div>
               <div style={{
                 display: "inline-block",
-                background: "rgba(255,255,255,0.1)",
+                background: theme === "dark" ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.08)",
                 padding: "6px 16px",
                 borderRadius: "100px",
                 fontSize: "0.8rem",
@@ -335,13 +449,9 @@ export default function App() {
           ) : isListening ? (
             <div style={{ position: "relative" }}>
               <div style={{
-                width: "120px",
-                height: "120px",
-                borderRadius: "50%",
-                background: `radial-gradient(circle, ${styles.accent}44 0%, transparent 70%)`,
-                position: "absolute",
-                top: "-30px",
-                left: "50%",
+                width: "120px", height: "120px", borderRadius: "50%",
+                background: `radial-gradient(circle, ${alertStyle.accent}44 0%, transparent 70%)`,
+                position: "absolute", top: "-30px", left: "50%",
                 transform: "translateX(-50%)",
                 animation: "ripple 2s ease-out infinite"
               }} />
@@ -369,7 +479,7 @@ export default function App() {
               marginTop: "30px",
               background: isListening
                 ? "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)"
-                : `linear-gradient(135deg, ${styles.accent} 0%, #0d9488 100%)`,
+                : `linear-gradient(135deg, ${alertStyle.accent} 0%, #0d9488 100%)`,
               color: "white",
               border: "none",
               borderRadius: "100px",
@@ -379,7 +489,7 @@ export default function App() {
               cursor: "pointer",
               boxShadow: isListening
                 ? "0 10px 30px rgba(239, 68, 68, 0.4)"
-                : `0 10px 30px ${styles.accent}66`,
+                : `0 10px 30px ${alertStyle.accent}66`,
               transition: "all 0.3s ease"
             }}
             onMouseEnter={e => e.currentTarget.style.transform = "translateY(-2px)"}
@@ -403,63 +513,36 @@ export default function App() {
           )}
         </div>
 
-        {/* Right column: Waveform + Confidence meters */}
+        {/* Right column */}
         <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-          {/* Waveform */}
-          <div style={{
-            background: "rgba(255,255,255,0.05)",
-            backdropFilter: "blur(20px)",
-            border: "1px solid rgba(255,255,255,0.1)",
-            borderRadius: "24px",
-            padding: "24px",
-            animation: "fadeIn 1s ease"
-          }}>
+          <div style={{ ...cardStyle, padding: "24px", animation: "fadeIn 1s ease" }}>
             <div style={{
-              fontSize: "0.85rem",
-              fontWeight: 600,
-              opacity: 0.7,
-              marginBottom: "16px",
-              letterSpacing: "0.1em",
-              textTransform: "uppercase"
+              fontSize: "0.8rem", fontWeight: 600, opacity: 0.7,
+              marginBottom: "16px", letterSpacing: "0.1em", textTransform: "uppercase"
             }}>
               Audio Input
             </div>
             <div style={{
-              display: "flex",
-              alignItems: "flex-end",
-              gap: "3px",
-              height: "80px",
-              justifyContent: "center"
+              display: "flex", alignItems: "flex-end", gap: "3px",
+              height: "80px", justifyContent: "center"
             }}>
               {waveform.map((val, i) => (
                 <div key={i} style={{
                   width: "4px",
                   height: `${Math.max(val * 100, 2)}%`,
-                  background: `linear-gradient(to top, ${styles.accent}, ${styles.accent}88)`,
+                  background: `linear-gradient(to top, ${alertStyle.accent}, ${alertStyle.accent}88)`,
                   borderRadius: "2px",
                   transition: "height 0.1s ease",
-                  boxShadow: isListening ? `0 0 6px ${styles.accent}66` : "none"
+                  boxShadow: isListening ? `0 0 6px ${alertStyle.accent}66` : "none"
                 }} />
               ))}
             </div>
           </div>
 
-          {/* Confidence meters */}
-          <div style={{
-            background: "rgba(255,255,255,0.05)",
-            backdropFilter: "blur(20px)",
-            border: "1px solid rgba(255,255,255,0.1)",
-            borderRadius: "24px",
-            padding: "24px",
-            animation: "fadeIn 1.2s ease"
-          }}>
+          <div style={{ ...cardStyle, padding: "24px", animation: "fadeIn 1.2s ease" }}>
             <div style={{
-              fontSize: "0.85rem",
-              fontWeight: 600,
-              opacity: 0.7,
-              marginBottom: "16px",
-              letterSpacing: "0.1em",
-              textTransform: "uppercase"
+              fontSize: "0.8rem", fontWeight: 600, opacity: 0.7,
+              marginBottom: "16px", letterSpacing: "0.1em", textTransform: "uppercase"
             }}>
               Detection Confidence
             </div>
@@ -469,10 +552,8 @@ export default function App() {
                 return (
                   <div key={cls}>
                     <div style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      marginBottom: "4px",
-                      fontSize: "0.8rem"
+                      display: "flex", justifyContent: "space-between",
+                      marginBottom: "4px", fontSize: "0.8rem"
                     }}>
                       <span style={{ textTransform: "capitalize", opacity: 0.85 }}>
                         {CLASS_ICONS[cls]} {cls.replace(/_/g, " ")}
@@ -483,7 +564,7 @@ export default function App() {
                     </div>
                     <div style={{
                       height: "6px",
-                      background: "rgba(255,255,255,0.08)",
+                      background: theme === "dark" ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)",
                       borderRadius: "4px",
                       overflow: "hidden"
                     }}>
@@ -505,48 +586,34 @@ export default function App() {
 
         {/* History */}
         <div style={{
-          background: "rgba(255,255,255,0.05)",
-          backdropFilter: "blur(20px)",
-          border: "1px solid rgba(255,255,255,0.1)",
-          borderRadius: "24px",
+          ...cardStyle,
           padding: "24px",
           gridColumn: "1 / -1",
           animation: "fadeIn 1.4s ease"
         }}>
           <div style={{
-            fontSize: "0.85rem",
-            fontWeight: 600,
-            opacity: 0.7,
-            marginBottom: "16px",
-            letterSpacing: "0.1em",
-            textTransform: "uppercase",
-            display: "flex",
-            justifyContent: "space-between"
+            fontSize: "0.8rem", fontWeight: 600, opacity: 0.7,
+            marginBottom: "16px", letterSpacing: "0.1em", textTransform: "uppercase",
+            display: "flex", justifyContent: "space-between"
           }}>
             <span>Detection History</span>
             <span>{history.length} {history.length === 1 ? "event" : "events"}</span>
           </div>
 
           {history.length === 0 ? (
-            <div style={{
-              textAlign: "center",
-              padding: "30px",
-              opacity: 0.4,
-              fontSize: "0.9rem"
-            }}>
+            <div style={{ textAlign: "center", padding: "30px", opacity: 0.4, fontSize: "0.9rem" }}>
               No detections yet. Start listening to see history.
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
               {history.map((item, i) => (
                 <div key={i} style={{
-                  display: "flex",
-                  alignItems: "center",
+                  display: "flex", alignItems: "center",
                   padding: "12px 16px",
                   background: item.is_danger
                     ? `${CLASS_COLORS[item.label]}22`
-                    : "rgba(255,255,255,0.03)",
-                  border: `1px solid ${item.is_danger ? CLASS_COLORS[item.label] + "44" : "rgba(255,255,255,0.08)"}`,
+                    : theme === "dark" ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.03)",
+                  border: `1px solid ${item.is_danger ? CLASS_COLORS[item.label] + "44" : t.cardBorder}`,
                   borderRadius: "12px",
                   fontSize: "0.9rem",
                   animation: "slideIn 0.3s ease"
@@ -555,11 +622,7 @@ export default function App() {
                     {CLASS_ICONS[item.label]}
                   </div>
                   <div style={{ flex: 1 }}>
-                    <div style={{
-                      fontWeight: 600,
-                      textTransform: "capitalize",
-                      marginBottom: "2px"
-                    }}>
+                    <div style={{ fontWeight: 600, textTransform: "capitalize", marginBottom: "2px" }}>
                       {item.label.replace(/_/g, " ")}
                     </div>
                     <div style={{ fontSize: "0.75rem", opacity: 0.5 }}>
@@ -567,10 +630,9 @@ export default function App() {
                     </div>
                   </div>
                   <div style={{
-                    fontSize: "0.8rem",
-                    fontWeight: 600,
+                    fontSize: "0.8rem", fontWeight: 600,
                     padding: "4px 10px",
-                    background: "rgba(255,255,255,0.08)",
+                    background: theme === "dark" ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)",
                     borderRadius: "100px"
                   }}>
                     {item.confidence}%
