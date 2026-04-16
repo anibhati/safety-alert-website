@@ -269,36 +269,74 @@ export default function App() {
 
       {/* Top nav */}
       <div style={{
-        display: "flex",
+        display: "grid",
+        gridTemplateColumns: "1fr auto 1fr",
         alignItems: "center",
-        justifyContent: "space-between",
         maxWidth: "1200px",
-        margin: "0 auto 30px",
+        margin: "0 auto 40px",
         position: "relative",
         zIndex: 10,
-        animation: "fadeIn 0.6s ease"
+        animation: "fadeIn 0.6s ease",
+        gap: "20px"
       }}>
+        {/* Left: Brand */}
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
           <Logo color={alertStyle.accent} />
           <div>
             <div style={{
-              fontSize: "1.5rem",
+              fontSize: "1.4rem",
               fontWeight: 800,
               letterSpacing: "-0.02em",
               background: `linear-gradient(135deg, ${alertStyle.accent} 0%, ${t.text} 100%)`,
               WebkitBackgroundClip: "text",
               WebkitTextFillColor: "transparent",
-              backgroundClip: "text"
+              backgroundClip: "text",
+              lineHeight: 1.1
             }}>
-              SafetyAlert
+              SignalSpace
             </div>
-            <div style={{ fontSize: "0.7rem", opacity: 0.6, letterSpacing: "0.08em" }}>
+            <div style={{
+              fontSize: "0.68rem",
+              opacity: 0.6,
+              letterSpacing: "0.12em",
+              fontWeight: 500,
+              marginTop: "2px"
+            }}>
               SOUND DETECTION FOR THE DEAF
             </div>
           </div>
         </div>
 
-        <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+        {/* Center: Product name */}
+        <div style={{
+          textAlign: "center",
+          padding: "10px 24px",
+          background: t.cardBg,
+          backdropFilter: "blur(20px)",
+          border: `1px solid ${t.cardBorder}`,
+          borderRadius: "100px",
+          whiteSpace: "nowrap"
+        }}>
+          <div style={{
+            fontSize: "0.7rem",
+            opacity: 0.5,
+            letterSpacing: "0.15em",
+            fontWeight: 600,
+            marginBottom: "2px"
+          }}>
+            PRODUCT
+          </div>
+          <div style={{
+            fontSize: "1rem",
+            fontWeight: 700,
+            letterSpacing: "0.02em"
+          }}>
+            Emergency Audio Detector
+          </div>
+        </div>
+
+        {/* Right: Action buttons */}
+        <div style={{ display: "flex", gap: "10px", alignItems: "center", justifyContent: "flex-end" }}>
           <button
             onClick={() => setShowFilters(!showFilters)}
             style={{
