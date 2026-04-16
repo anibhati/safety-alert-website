@@ -72,6 +72,52 @@ const Logo = ({ color = "currentColor" }) => (
   </svg>
 );
 
+// Typewriter component
+const Typewriter = ({ phrases, accent }) => {
+  const [text, setText] = React.useState("");
+  const [phraseIdx, setPhraseIdx] = React.useState(0);
+  const [isDeleting, setIsDeleting] = React.useState(false);
+
+  React.useEffect(() => {
+    const current = phrases[phraseIdx];
+    const speed = isDeleting ? 30 : 60;
+    const timeout = setTimeout(() => {
+      if (!isDeleting && text === current) {
+        setTimeout(() => setIsDeleting(true), 2500);
+        return;
+      }
+      if (isDeleting && text === "") {
+        setIsDeleting(false);
+        setPhraseIdx((phraseIdx + 1) % phrases.length);
+        return;
+      }
+      setText(isDeleting ? current.substring(0, text.length - 1) : current.substring(0, text.length + 1));
+    }, speed);
+    return () => clearTimeout(timeout);
+  }, [text, isDeleting, phraseIdx, phrases]);
+
+  return (
+    <div style={{
+      fontSize: "0.95rem",
+      fontWeight: 500,
+      minHeight: "24px",
+      fontFamily: "'Courier New', monospace",
+      letterSpacing: "0.02em"
+    }}>
+      <span style={{ opacity: 0.9 }}>{text}</span>
+      <span style={{
+        display: "inline-block",
+        width: "2px",
+        height: "18px",
+        background: accent,
+        marginLeft: "2px",
+        verticalAlign: "middle",
+        animation: "blink 1s step-end infinite"
+      }} />
+    </div>
+  );
+};
+
 export default function App() {
   const [result, setResult] = useState(null);
   const [isListening, setIsListening] = useState(false);
@@ -264,6 +310,7 @@ export default function App() {
         @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes slideIn { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
         @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes blink { 0%,50% { opacity: 1; } 51%,100% { opacity: 0; } }
         * { box-sizing: border-box; }
       `}</style>
 
@@ -335,40 +382,59 @@ export default function App() {
           </div>
         </div>
 
-        {/* Right: Action buttons */}
-        <div style={{ display: "flex", gap: "10px", alignItems: "center", justifyContent: "flex-end" }}>
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            style={{
-              background: t.cardBg,
-              border: `1px solid ${t.cardBorder}`,
-              borderRadius: "12px",
-              color: t.text,
-              padding: "8px 14px",
-              fontSize: "0.85rem",
-              fontWeight: 500,
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: "6px"
-            }}
-          >
-            ⚙ Filters
-          </button>
-          <button
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            style={{
-              background: t.cardBg,
-              border: `1px solid ${t.cardBorder}`,
-              borderRadius: "12px",
-              color: t.text,
-              padding: "8px 14px",
-              fontSize: "0.95rem",
-              cursor: "pointer"
-            }}
-          >
-            {theme === "dark" ? "☀" : "🌙"}
-          </button>
+        {/* Right: Typewriter + buttons */}
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "12px" }}>
+          <div style={{
+            padding: "10px 18px",
+            background: t.cardBg,
+            backdropFilter: "blur(20px)",
+            border: `1px solid ${t.cardBorder}`,
+            borderRadius: "12px",
+            minWidth: "280px",
+            textAlign: "left"
+          }}>
+            <Typewriter
+              phrases={[
+                "Detecting sirens in real-time...",
+                "Listening for danger...",
+                "Protecting with machine learning...",
+                "Empowering the deaf community...",
+                "Analyzing sound patterns..."
+              ]}
+              accent={alertStyle.accent}
+            />
+          </div>
+          <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              style={{
+                background: t.cardBg,
+                border: `1px solid ${t.cardBorder}`,
+                borderRadius: "12px",
+                color: t.text,
+                padding: "8px 14px",
+                fontSize: "0.85rem",
+                fontWeight: 500,
+                cursor: "pointer"
+              }}
+            >
+              ⚙ Filters
+            </button>
+            <button
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              style={{
+                background: t.cardBg,
+                border: `1px solid ${t.cardBorder}`,
+                borderRadius: "12px",
+                color: t.text,
+                padding: "8px 14px",
+                fontSize: "0.95rem",
+                cursor: "pointer"
+              }}
+            >
+              {theme === "dark" ? "☀" : "🌙"}
+            </button>
+          </div>
         </div>
       </div>
 
