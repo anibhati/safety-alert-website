@@ -668,20 +668,106 @@ export default function App() {
             </div>
           </div>
 
-          {/* Typewriter info card */}
-          <div style={{
-            ...cardStyle,
-            padding: "24px",
-            animation: "fadeIn 1.4s ease",
-            flex: 1,
-            minHeight: "120px",
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "center"
-          }}>
+        </div>
+
+        {/* Info column - third column on wide screens */}
+        <div style={{
+          ...cardStyle,
+          padding: "30px 24px",
+          minHeight: "400px",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "space-between",
+          animation: "fadeIn 1.4s ease"
+        }}>
+          <div>
             <div style={{
               fontSize: "0.8rem", fontWeight: 600, opacity: 0.7,
-              marginBottom: "12px", letterSpacing: "0.1em", textTransform: "uppercase"
+              marginBottom: "16px", letterSpacing: "0.1em", textTransform: "uppercase"
+            }}>
+              About SignalSpace
+            </div>
+            <div style={{
+              fontSize: "1rem",
+              lineHeight: 1.6,
+              opacity: 0.85,
+              marginBottom: "24px",
+              fontWeight: 300
+            }}>
+              An AI-powered safety companion that listens to your environment and alerts you to critical sounds — empowering those who cannot hear to stay aware and safe.
+            </div>
+
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "12px",
+              marginBottom: "24px"
+            }}>
+              <div style={{
+                padding: "14px",
+                background: theme === "dark" ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.04)",
+                borderRadius: "12px",
+                textAlign: "center"
+              }}>
+                <div style={{ fontSize: "1.4rem", fontWeight: 700, color: alertStyle.accent }}>
+                  25K+
+                </div>
+                <div style={{ fontSize: "0.7rem", opacity: 0.6, marginTop: "2px" }}>
+                  Training Samples
+                </div>
+              </div>
+              <div style={{
+                padding: "14px",
+                background: theme === "dark" ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.04)",
+                borderRadius: "12px",
+                textAlign: "center"
+              }}>
+                <div style={{ fontSize: "1.4rem", fontWeight: 700, color: alertStyle.accent }}>
+                  6
+                </div>
+                <div style={{ fontSize: "0.7rem", opacity: 0.6, marginTop: "2px" }}>
+                  Sound Classes
+                </div>
+              </div>
+              <div style={{
+                padding: "14px",
+                background: theme === "dark" ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.04)",
+                borderRadius: "12px",
+                textAlign: "center"
+              }}>
+                <div style={{ fontSize: "1.4rem", fontWeight: 700, color: alertStyle.accent }}>
+                  3s
+                </div>
+                <div style={{ fontSize: "0.7rem", opacity: 0.6, marginTop: "2px" }}>
+                  Analysis Window
+                </div>
+              </div>
+              <div style={{
+                padding: "14px",
+                background: theme === "dark" ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.04)",
+                borderRadius: "12px",
+                textAlign: "center"
+              }}>
+                <div style={{ fontSize: "1.4rem", fontWeight: 700, color: alertStyle.accent }}>
+                  AI
+                </div>
+                <div style={{ fontSize: "0.7rem", opacity: 0.6, marginTop: "2px" }}>
+                  Neural Network
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style={{
+            padding: "14px 16px",
+            background: theme === "dark" ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.04)",
+            borderRadius: "12px",
+            borderLeft: `3px solid ${alertStyle.accent}`
+          }}>
+            <div style={{
+              fontSize: "0.65rem", fontWeight: 600, opacity: 0.5,
+              letterSpacing: "0.12em", textTransform: "uppercase",
+              marginBottom: "6px"
             }}>
               System Status
             </div>
@@ -689,10 +775,9 @@ export default function App() {
               phrases={[
                 "Detecting sirens in real-time...",
                 "Listening for danger...",
-                "Protecting with machine learning...",
-                "Empowering the deaf community...",
-                "Analyzing sound patterns...",
-                "Trained on 25,000+ audio samples..."
+                "Protecting with ML...",
+                "Empowering deaf users...",
+                "Analyzing patterns..."
               ]}
               accent={alertStyle.accent}
             />
