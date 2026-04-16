@@ -382,59 +382,40 @@ export default function App() {
           </div>
         </div>
 
-        {/* Right: Typewriter + buttons */}
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "12px" }}>
-          <div style={{
-            padding: "10px 18px",
-            background: t.cardBg,
-            backdropFilter: "blur(20px)",
-            border: `1px solid ${t.cardBorder}`,
-            borderRadius: "12px",
-            minWidth: "280px",
-            textAlign: "left"
-          }}>
-            <Typewriter
-              phrases={[
-                "Detecting sirens in real-time...",
-                "Listening for danger...",
-                "Protecting with machine learning...",
-                "Empowering the deaf community...",
-                "Analyzing sound patterns..."
-              ]}
-              accent={alertStyle.accent}
-            />
-          </div>
-          <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              style={{
-                background: t.cardBg,
-                border: `1px solid ${t.cardBorder}`,
-                borderRadius: "12px",
-                color: t.text,
-                padding: "8px 14px",
-                fontSize: "0.85rem",
-                fontWeight: 500,
-                cursor: "pointer"
-              }}
-            >
-              ⚙ Filters
-            </button>
-            <button
-              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              style={{
-                background: t.cardBg,
-                border: `1px solid ${t.cardBorder}`,
-                borderRadius: "12px",
-                color: t.text,
-                padding: "8px 14px",
-                fontSize: "0.95rem",
-                cursor: "pointer"
-              }}
-            >
-              {theme === "dark" ? "☀" : "🌙"}
-            </button>
-          </div>
+        {/* Right: Action buttons */}
+        <div style={{ display: "flex", gap: "10px", alignItems: "center", justifyContent: "flex-end" }}>
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            style={{
+              background: t.cardBg,
+              border: `1px solid ${t.cardBorder}`,
+              borderRadius: "12px",
+              color: t.text,
+              padding: "8px 14px",
+              fontSize: "0.85rem",
+              fontWeight: 500,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px"
+            }}
+          >
+            ⚙ Filters
+          </button>
+          <button
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            style={{
+              background: t.cardBg,
+              border: `1px solid ${t.cardBorder}`,
+              borderRadius: "12px",
+              color: t.text,
+              padding: "8px 14px",
+              fontSize: "0.95rem",
+              cursor: "pointer"
+            }}
+          >
+            {theme === "dark" ? "☀" : "🌙"}
+          </button>
         </div>
       </div>
 
@@ -685,6 +666,36 @@ export default function App() {
                 );
               })}
             </div>
+          </div>
+
+          {/* Typewriter info card */}
+          <div style={{
+            ...cardStyle,
+            padding: "24px",
+            animation: "fadeIn 1.4s ease",
+            flex: 1,
+            minHeight: "120px",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center"
+          }}>
+            <div style={{
+              fontSize: "0.8rem", fontWeight: 600, opacity: 0.7,
+              marginBottom: "12px", letterSpacing: "0.1em", textTransform: "uppercase"
+            }}>
+              System Status
+            </div>
+            <Typewriter
+              phrases={[
+                "Detecting sirens in real-time...",
+                "Listening for danger...",
+                "Protecting with machine learning...",
+                "Empowering the deaf community...",
+                "Analyzing sound patterns...",
+                "Trained on 25,000+ audio samples..."
+              ]}
+              accent={alertStyle.accent}
+            />
           </div>
         </div>
 
